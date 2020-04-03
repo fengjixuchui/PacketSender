@@ -2,7 +2,19 @@
 
 ![Packet Sender Logo](screenshots/packetsender_banner.png)
 
+[![Downloads](https://img.shields.io/github/downloads/dannagle/PacketSender/total.svg)](https://packetsender.com/download)
+
 Packet Sender is an open source utility to allow sending and receiving TCP, UDP, and SSL (encrypted TCP) packets. The mainline branch officially supports Windows, Mac, and Desktop Linux (with Qt). Other places may recompile and redistribute Packet Sender. Packet Sender is free and licensed GPL v2 or later. It can be used for both commercial and personal use.
+
+## Sponsors
+
+Packet Sender would like to thank the following sponsors.
+
+[![JetBrains](screenshots/JetBrains_Logo200.png)](https://www.jetbrains.com/?from=PacketSender)
+[![GitHub](screenshots/GitHub_Logo200.png)](https://help.github.com/articles/about-github-sponsors)
+[![NagleCode](screenshots/naglecode-logo400.png)](https://dannagle.com)
+
+[Would you like your name/logo listed here?](https://github.com/sponsors/dannagle)
 
 ## Uses
 
@@ -109,7 +121,7 @@ Packet Sender is identical for all the desktop versions. The only difference is 
   * \XX gets translated to XX in hex
   * \n, \r, \t will get translated to 0A, 0D, and 09
   * HEX numbers are space delimited
-    * The HEX field will attempt to interpret other common delimiters (such as commas, colons (Wireshark), semicolons, " 0x", etc) and auto-correct.  
+    * The HEX field will attempt to interpret other common delimiters (such as commas, colons (Wireshark), semicolons, " 0x", etc) and auto-correct.
     * A single stream of HEX is also supported. If the number of bytes is odd, Packet Sender will assume the front byte needs a zero and then auto-correct.
   * Example ASCII: hello world\r
   * Example HEX: 68 65 6c 6c 6f 20 77 6f 72 6c 64 0d
@@ -183,7 +195,7 @@ Packet Sender supports persistent TCP and SSL connections via a separate UI dial
 * Previously saved packets can be loaded in the drop-down.
 * There is a "raw" view and "ASCII" view. The ASCII view is useful to troubleshoot data that is not printed by the raw view.
 * Traffic is also saved in the main window traffic log.
-* A file may be uploaded to the persistent connection. You may wish to turn off logging if you use this.  
+* A file may be uploaded to the persistent connection. You may wish to turn off logging if you use this.
 * The timer in the bottom lefts starts as soon as a valid data packet is sent/received. It stops when the connection is closed.
 * You may optionally append a carriage return when you quick-send by hitting the return key. This is useful for command-prompt menus over TCP  / SSL connections. Packet Sender remembers previous state of \r checkbox.
 * Incoming persistent connections to the server will launch the UI dialog.
@@ -230,33 +242,49 @@ The command line system in Packet Sender follows the same pattern as other Linux
     See https://PacketSender.com/ for more information.
 
     Options:
-    -?, -h, --help 	Displays this help.
-    -v, --version 	Displays version information.
-    -q, --quiet 	Quiet mode. Only output received data.
-    -x, --hex 	Parse data-to-send as hex (default).
-    -a, --ascii 	Parse data-to-send as mixed-ascii (like the GUI).
-    -A, --ASCII 	Parse data-to-send as pure ascii (no \xx translation).
-    -w, --wait <ms> Wait up to <milliseconds> for a response after sending. Zero means do not wait (Default).
-    -f, --file <path> 	Send contents of specified path. Max 1024 for UDP, 100 MiB for TCP.
-    -b, --bind <port> 	Bind port. Default is dynamic.
-    -t, --tcp 	Send TCP (default).
-    -s, --ssl   Send SSL and ignore errors.
-    -S, --SSL   Send SSL and stop for errors.
-    -u, --udp   Send UDP.    
-    -n, --name <name> 	Send previously saved packet named <name>. Other options overrides saved packet parameters.
+    -?, -h, --help     Displays this help.
+    -v, --version      Displays version information.
+    -q, --quiet        Quiet mode. Only output received data.
+    -x, --hex          Parse data-to-send as hex (default).
+    -a, --ascii        Parse data-to-send as mixed-ascii (like the GUI).
+    -A, --ASCII        Parse data-to-send as pure ascii (no \xx translation).
+    -w, --wait <ms>    Wait up to <milliseconds> for a response after sending.
+                          Zero means do not wait (Default).
+    -f, --file <path>  Send contents of specified path. Max 10 MiB for UDP, 100
+                           MiB for TCP/SSL.
+    -b, --bind <port>  Bind port. Default is 0 (dynamic).
+    -6, --ipv6         Force IPv6. Same as -B "::". Default is IP:Any.
+    -4, --ipv4         Force IPv4.    Same as -B "0.0.0.0". Default is IP:Any.
+    -B, --bindip <IP>  Bind custom IP. Default is IP:Any.
+    -t, --tcp          Send TCP (default).
+    -s, --ssl          Send SSL and ignore errors.
+    -S, --SSL          Send SSL and stop for errors.
+    -u, --udp          Send UDP.
+    -n, --name <name>  Send previously saved packet named <name>. Other options
+                           overrides saved packet parameters.
 
-    -Arguments:
-    -address 	Destination address. Optional for saved packet.
-    -port 	Destination port. Optional for saved packet.
-    -data 	Data to send. Optional for saved packet.
+    Arguments:
+    address            Destination address. Optional for saved packet.
+    port               Destination port. Optional for saved packet.
+    data               Data to send. Optional for saved packet.
 
 ### Example CLI
 
-    packetsender -taw 500 packetsender.com 22 "Hello\nWorld"
-    TCP (56620)://192.185.38.130 48 65 6c 6c 6f 0a 57 6f 72 6c 64
+    packetsender -taw 500 mirrors.xmission.com 21 "USER anonymous\r\nPASS chrome@example.com\r\n"
+    TCP (65505)://mirrors.xmission.com:21 55 53 45 52 20 61 6e 6f 6e 79 6d 6f 75 73 0d 0a 50 41 53 53 20 63 68 72 6f 6d 65 40 65 78 61 6d 70 6c 65 2e 63 6f 6d 0d 0a
     Response Time:5:51:37.042 pm
-    Response HEX:53 53 48 2D 32 2E 30 2D 4F 70 65 6E 53 53 48 5F 35 2E 33 70 31 20 44 65 62 69 61 6E 2D 33 75 62 75 6E 74 75 33 2E 31 2E 49 53 2E 31 30 2E 30 34 0D 0A
-    Response ASCII:SSH-2.0-OpenSSH_5.3p1 Debian-3ubuntu3.1.IS.10.04\r\n
+    Response HEX:32 32 30 2D 57 65 6C 63 6F 6D 65 20...
+    Response ASCII:220-Welcome to XMission Internet...
+
+### Examples binding to port and custom IP, IPv4, or IPv6
+
+Packet Sender command line can bind to custom ports to force IPv4/6 modes or multiple NIC.
+
+    packetsender -taw 3000 fe80::c07b:d517:e339:5a08 5005 "Hello\r"
+    packetsender -taw 3000 192.168.0.201 5005 "Hello\r"
+    packetsender -B 192.168.0.200 -taw 3000 192.168.0.201 5005 "Hello\r"
+    packetsender -B fe80::a437:399a:3091:266a%ethernet_32769 -taw 3000 fe80::c07b:d517:e339:5a08 5005 "Hello\r"
+    packetsender -B fe80::a437:399a:3091:266a -taw 3000 fe80::c07b:d517:e339:5a08 5005 "Hello\r"
 
 ### Example CLI using SSL and ignoring errors
 
@@ -286,7 +314,7 @@ The Windows and Mac versions were built using Qt 5.12
 
 ### Build for Linux
 
-Here is the sequence of commands for Ubuntu 16.04. Please adapt to your Linux platform. Packet Sender requires no additional libraries beyond the stock Qt SDK. I have been told there are build issues with stock Fedora. If a Fedora wizard can get it to properly compile, please let me know, and I'll add your instructions.
+Here is the sequence of commands for Ubuntu 16.04. Please adapt to your Linux platform. Packet Sender requires no additional libraries beyond the stock Qt SDK. I have been told there are build issues with stock Fedora. If a Fedora wizard has insight, please let me know, and I'll add your instructions.
 
 If you are feeling adventurous, feel free to build from the master branch. It contains the latest stable build. The development branch should probably be avoided.
 

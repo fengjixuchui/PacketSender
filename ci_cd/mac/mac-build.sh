@@ -40,24 +40,24 @@ sed -i '' '/BEGIN/,/END/c\
 echo "Replacing Info.plist with $BUILD_VERSION"
 sed -i '' 's/<string>1.0<\/string>/<string>'$BUILD_VERSION'<\/string>/' Info.plist
 
-"/Users/dannagle/Qt/5.12.0/clang_64/bin/qmake" PacketSender.pro -spec macx-clang CONFIG+=x86_64
+"/Users/dannagle/Qt/5.13.0/clang_64/bin/qmake" PacketSender.pro -spec macx-clang CONFIG+=x86_64
 make
-/Users/dannagle/Qt/5.12.0/clang_64/bin/macdeployqt PacketSender.app -appstore-compliant
+/Users/dannagle/Qt/5.13.0/clang_64/bin/macdeployqt PacketSender.app -appstore-compliant
 codesign --option runtime --deep --force --sign "Developer ID Application: NagleCode, LLC (C77T3Q8VPT)" PacketSender.app
 
 rm -rf /Users/dannagle/github/PacketSender/PacketSender.app || true
 mv PacketSender.app /Users/dannagle/github/PacketSender
 
 rm -rf newbuild.dmg  || true
-"/Applications/DMG Canvas.app/Contents/Resources/dmgcanvas" "/Users/dannagle/github/PacketSender/PacketSender.dmgCanvas" newbuild.dmg
+"/Applications/DMG Canvas.app/Contents/Resources/dmgcanvas" "/Users/dannagle/github/PacketSender/PacketSender.dmgCanvas" newbuild.dmg -notarizationPrimaryBundleID "com.packetsender.desktop" -identity "Developer ID Application: NagleCode, LLC (C77T3Q8VPT)" -notarizationAppleID "$2" -notarizationPassword "$3"
 
 rm -rf /Users/dannagle/github/PacketSender/PacketSender_v$BUILD_VERSION.dmg || true
 mv newbuild.dmg /Users/dannagle/github/PacketSender/PacketSender_v$BUILD_VERSION.dmg
 
 echo "Finished creating PacketSender_v$BUILD_VERSION.dmg"
 
-echo "Sending to Apple for notary"
-xcrun altool --notarize-app -f /Users/dannagle/github/PacketSender/PacketSender_v$BUILD_VERSION.dmg --primary-bundle-id 'com.packetsender.desktop'  -u ''$APPLE_UNAME'' -p ''$APPLE_PWORD''
+#echo "Sending to Apple for notary"
+#xcrun altool --notarize-app -f /Users/dannagle/github/PacketSender/PacketSender_v$BUILD_VERSION.dmg --primary-bundle-id 'com.packetsender.desktop'  -u ''$APPLE_UNAME'' -p ''$APPLE_PWORD''
 
 
 popd
