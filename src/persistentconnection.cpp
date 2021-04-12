@@ -15,6 +15,9 @@
 #include <QMessageBox>
 
 
+
+const QString PersistentConnection::RESEND_BUTTON_STYLE = "QPushButton { color: black; } QPushButton::hover { color: #BC810C; } ";
+
 PersistentConnection::PersistentConnection(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::PersistentConnection)
@@ -26,8 +29,6 @@ PersistentConnection::PersistentConnection(QWidget *parent) :
 
     suppressSlot = true;
     previousCommands.clear();
-
-
 
     QDEBUG();
     sendPacket.clear();
@@ -122,6 +123,7 @@ void PersistentConnection::statusReceiver(QString message)
         ui->searchEdit->setEnabled(false);
         ui->packetComboBox->setEnabled(false);
         ui->LoadButton->setEnabled(false);
+        ui->sendFileButton->setEnabled(false);
 
         ui->stopResendingButton->hide();
         stopTimer = true;
@@ -186,7 +188,7 @@ void PersistentConnection::init()
     ui->appendCRcheck->setChecked(appendCR);
 
 
-    ui->stopResendingButton->setStyleSheet("QPushButton { color: black; } QPushButton::hover { color: #BC810C; } ");
+    ui->stopResendingButton->setStyleSheet(PersistentConnection::RESEND_BUTTON_STYLE);
     ui->stopResendingButton->setFlat(true);
     ui->stopResendingButton->setCursor(Qt::PointingHandCursor);
     ui->stopResendingButton->setIcon(QIcon(PSLOGO));
@@ -316,20 +318,17 @@ void PersistentConnection::loadTrafficView()
 
 }
 
+
 void PersistentConnection::packetSentSlot(Packet pkt)
 {
-
     QDEBUGVAR(pkt.hexString.size());
     trafficList.append(pkt);
     loadTrafficView();
-
 }
 
 void PersistentConnection::packetReceivedSlot(Packet pkt)
 {
-    QDEBUGVAR(pkt.hexString.size());
-    trafficList.append(pkt);
-    loadTrafficView();
+    packetSentSlot(pkt);
 }
 
 void PersistentConnection::socketDisconnected()

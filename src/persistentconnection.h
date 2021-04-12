@@ -1,5 +1,4 @@
-#ifndef PERSISTENTCONNECTION_H
-#define PERSISTENTCONNECTION_H
+#pragma once
 
 #include <QDialog>
 #include <QTimer>
@@ -14,6 +13,9 @@ namespace Ui
 class PersistentConnection;
 }
 
+
+
+
 class PersistentConnection : public QDialog
 {
         Q_OBJECT
@@ -24,6 +26,8 @@ class PersistentConnection : public QDialog
         Packet sendPacket;
         Packet reSendPacket;
         TCPThread *thread;
+
+        static const QString RESEND_BUTTON_STYLE;
 
         void init();
 
@@ -86,4 +90,3 @@ private:
         void cancelResends();
 };
 
-#endif // PERSISTENTCONNECTION_H

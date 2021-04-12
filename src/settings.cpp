@@ -95,6 +95,9 @@ Settings::Settings(QWidget *parent) :
     on_smartResponseEnableCheck_clicked();
 
 
+
+    ui->darkModeCheck->setChecked(settings.value("darkModeCheck", true).toBool());
+
     ui->translateMacroSendCheck->setChecked(settings.value("translateMacroSendCheck", true).toBool());
 
     ui->persistentTCPCheck->setChecked(settings.value("persistentTCPCheck", false).toBool());
@@ -124,7 +127,7 @@ Settings::Settings(QWidget *parent) :
 
     ui->serverSnakeOilCheck->setChecked(settings.value("serverSnakeOilCheck", true).toBool());
 
-
+    ui->ellipsisCheck->setChecked(settings.value("ellipsisCheck", true).toBool());
 
     ui->attemptReceiveCheck->setChecked(settings.value("attemptReceiveCheck", false).toBool());
 
@@ -282,6 +285,8 @@ void Settings::on_buttonBox_accepted()
     settings.setValue("serverSnakeOilCheck", ui->serverSnakeOilCheck->isChecked());
 
 
+    settings.setValue("ellipsisCheck", ui->ellipsisCheck->isChecked());
+
     settings.setValue("attemptReceiveCheck", ui->attemptReceiveCheck->isChecked());
 
     settings.setValue("delayAfterConnectCheck", ui->delayAfterConnectCheck->isChecked());
@@ -304,6 +309,9 @@ void Settings::on_buttonBox_accepted()
     settings.setValue("rolling500entryCheck", ui->rolling500entryCheck->isChecked());
 
     settings.setValue("persistentTCPCheck", ui->persistentTCPCheck->isChecked());
+    settings.setValue("translateMacroSendCheck", ui->translateMacroSendCheck->isChecked());
+
+    settings.setValue("darkModeCheck", ui->darkModeCheck->isChecked());
 
 
     settings.setValue("cancelResendNum", ui->cancelResendNumEdit->text().toUInt());

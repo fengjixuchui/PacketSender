@@ -4,7 +4,7 @@
  * Licensed GPL v2
  * http://PacketSender.com/
  *
- * Copyright Dan Nagle
+ * Copyright NagleCode, LLC
  *
  */
 #ifndef MAINWINDOW_H
@@ -209,15 +209,13 @@ private:
         QPushButton * stopResendingButton;
         QPushButton * IPmodeButton;
 
-        QString IPv4Stylesheet;
-        QString IPv6Stylesheet;
-
-
 
         QStringList packetTableHeaders;
         QStringList packetSavedTableHeaders;
 
         Packet lastSendPacket;
+
+        bool darkMode;
 
         int maxLogSize;
 

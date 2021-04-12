@@ -4,7 +4,7 @@
  * Licensed GPL v2
  * http://PacketSender.com/
  *
- * Copyright Dan Nagle
+ * Copyright NagleCode, LLC
  *
  */
 #include <QtWidgets/QApplication>
@@ -725,13 +725,17 @@ int main(int argc, char *argv[])
     } else {
 
 
+
 #ifdef __linux__
-        //Workaround linux check for those that support xrandr
+#ifndef ISSNAP
+
+        //Workaround linux check for those that support xrandr. Does not work for snaps
         //Note that this bug is actually within Qt.
         if (!isGuiApp()) {
             printf("\nCannot open display. Try --help to access console app.\n");
             return -1;
         }
+#endif
 #endif
 
         QApplication a(argc, argv);
@@ -743,11 +747,25 @@ int main(int argc, char *argv[])
 
         //Use default OS styling for non-Windows. Too many theme variants.
 
-        QFile file(":/qdarkstyle/style.qss");
-        if (file.open(QFile::ReadOnly)) {
-            QString StyleSheet = QLatin1String(file.readAll());
-            //  qDebug() << "stylesheet: " << StyleSheet;
-            a.setStyleSheet(StyleSheet);
+
+        QFile file_system(":/packetsender.css");
+        QFile file_dark(":/qdarkstyle/style.qss");
+
+        QSettings settings(SETTINGSFILE, QSettings::IniFormat);
+        bool useDark = settings.value("darkModeCheck", true).toBool();
+
+        if(useDark) {
+            if (file_dark.open(QFile::ReadOnly)) {
+                QString StyleSheet = QLatin1String(file_dark.readAll());
+                a.setStyleSheet(StyleSheet);
+                file_dark.close();
+            }
+        } else {
+            if (file_system.open(QFile::ReadOnly)) {
+                QString StyleSheet = QLatin1String(file_system.readAll());
+                a.setStyleSheet(StyleSheet);
+                file_system.close();
+            }
         }
 
 

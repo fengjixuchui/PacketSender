@@ -4,7 +4,7 @@
  * Licensed GPL v2
  * http://PacketSender.com/
  *
- * Copyright Dan Nagle
+ * Copyright NagleCode, LLC
  *
  */
 #include "mainwindow.h"
@@ -42,6 +42,8 @@
 #include "subnetcalc.h"
 #include "udpflooding.h"
 #include "cloudui.h"
+#include "postdatagen.h"
+#include "panelgenerator.h"
 
 
 int hexToInt(QChar hex);
@@ -49,17 +51,6 @@ void parserMajorMinorBuild(QString sw, unsigned int &major, unsigned int &minor,
 extern void themeTheButton(QPushButton * button);
 
 
-//Only AppImage linux needs to check for updates.
-
-#ifdef __linux__
-
-#define SNAPBUILD true
-
-#else
-
-#define SNAPBUILD false
-
-#endif
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -79,6 +70,9 @@ MainWindow::MainWindow(QWidget *parent) :
     setWindowIcon(mIcon);
 
     tableActive = false;
+    darkMode = settings.value("darkModeCheck", true).toBool();
+
+
 
     //seed qrand
     QTime time = QTime::currentTime();
@@ -90,9 +84,8 @@ MainWindow::MainWindow(QWidget *parent) :
         maxLogSize = 100;
     }
 
-#if IS_STUDIO
+
     ui->generatePanelButton->hide();
-#endif
 
     http = new QNetworkAccessManager(this); //Main application http object
 
@@ -113,6 +106,23 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->packetsTable->setWordWrap(false);
     ui->trafficLogTable->setWordWrap(false);
+
+    // default is TCP
+    ui->udptcpComboBox->setCurrentIndex(ui->udptcpComboBox->findText("TCP"));
+
+
+    // FEATURES IN ACTIVE DEVELOPMENT
+
+    // HTTP GET/POST Not Finished
+    int http_indexes = ui->udptcpComboBox->findText("HTTP", Qt::MatchContains);
+    while(http_indexes > -1) {
+        ui->udptcpComboBox->removeItem(http_indexes);
+        http_indexes = ui->udptcpComboBox->findText("HTTP", Qt::MatchContains);
+    }
+
+    // Panel Generation Not Finished
+    ui->actionPanel_Generator->setVisible(false);
+
 
     //load last session
     if (settings.value("restoreSessionCheck", true).toBool()) {
@@ -155,8 +165,18 @@ MainWindow::MainWindow(QWidget *parent) :
              connect(&packetNetwork, SIGNAL(packetSent(Packet)),
                      this, SLOT(toTrafficLog(Packet)));
 
+    if( !QFile::exists(PACKETSFILE)) {
+        // Packets file does not exist. Load starter set.
+        QFile starterfile(":/starter_set.json");
+        if (starterfile.open(QFile::ReadOnly)) {
+            QList<Packet> packets = Packet::ImportJSON(starterfile.readAll());
+            packetsImported(packets);
+        }
 
-    packetsSaved = Packet::fetchAllfromDB("");
+    } else {
+        packetsSaved = Packet::fetchAllfromDB("");
+    }
+
     QDEBUGVAR(packetsSaved.size());
 
     packetTableHeaders  = Settings::defaultTrafficTableHeader();
@@ -177,7 +197,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     stopResendingButton = new QPushButton("Resending");
-    stopResendingButton->setStyleSheet("QPushButton { color: black; } QPushButton::hover { color: #BC810C; } ");
+    stopResendingButton->setStyleSheet(PersistentConnection::RESEND_BUTTON_STYLE);
     themeTheButton(stopResendingButton);
     stopResendingButton->setIcon(QIcon(PSLOGO));
 
@@ -222,15 +242,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     statusBar()->insertPermanentWidget(4, sslServerStatus);
 
-    IPv4Stylesheet = "QPushButton {width:75px; color: lightgreen; } QPushButton::hover { color: #BC810C; } ";
-    IPv6Stylesheet = "QPushButton {width:75px; color: lightblue; } QPushButton::hover { color: #BC810C; } ";
-
     //ipmode toggle
     IPmodeButton = new QPushButton("IPv4 Mode");
     themeTheButton(IPmodeButton);
     statusBar()->insertPermanentWidget(5, IPmodeButton);
 
     setIPMode();
+
 
 
     connect(IPmodeButton, SIGNAL(clicked()),
@@ -370,6 +388,21 @@ MainWindow::MainWindow(QWidget *parent) :
     QDEBUG() << "Settings file loaded" << SETTINGSFILE;
     QDEBUG() << "Packets file loaded" << PACKETSFILE;
 
+    // Generate starter_set.json
+    /*
+    QByteArray j = Packet::ExportJSON(packetsSaved);
+#ifdef _WIN32
+    QFile starter("../src/starter_set.json");
+#else
+    QFile starter("starter_set.json");
+#endif
+    starter.open(QFile::WriteOnly);
+    starter.write(j);
+    starter.close();
+    */
+
+
+
 
 }
 
@@ -445,6 +478,11 @@ void MainWindow::updateManager(QByteArray response)
 {
     QSettings settings(SETTINGSFILE, QSettings::IniFormat);
 
+    //snaps do not need to check for updates.
+#ifdef ISSNAP
+    return;
+#endif
+
     if (!response.isEmpty()) {
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (!doc.isNull()) {
@@ -519,29 +557,25 @@ void MainWindow::updateManager(QByteArray response)
         return;
     }
 
-    if(! (SNAPBUILD)) {
-        //snaps do not need to check for updates.
-
-        if (!settings.value("checkforUpdatesAsked", false).toBool()) {
-            settings.setValue("checkforUpdatesAsked", true);
-            QMessageBox msgBox;
-            msgBox.setWindowIcon(QIcon(":pslogo.png"));
-            msgBox.setWindowTitle("Updates.");
-            msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-            msgBox.setDefaultButton(QMessageBox::Yes);
-            msgBox.setIcon(QMessageBox::Warning);
-            msgBox.setText("Let Packet Sender check for updates weekly?");
-            int yesno = msgBox.exec();
-            if (yesno == QMessageBox::Yes) {
-                QDEBUG() << "Will check for updates";
-                settings.setValue("checkforUpdates", true);
-            } else {
-                QDEBUG() << "Will NOT check for updates";
-                settings.setValue("checkforUpdates", false);
-            }
-
-            settings.sync();
+    if (!settings.value("checkforUpdatesAsked", false).toBool()) {
+        settings.setValue("checkforUpdatesAsked", true);
+        QMessageBox msgBox;
+        msgBox.setWindowIcon(QIcon(":pslogo.png"));
+        msgBox.setWindowTitle("Updates.");
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::Yes);
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.setText("Let Packet Sender check for updates weekly?");
+        int yesno = msgBox.exec();
+        if (yesno == QMessageBox::Yes) {
+            QDEBUG() << "Will check for updates";
+            settings.setValue("checkforUpdates", true);
+        } else {
+            QDEBUG() << "Will NOT check for updates";
+            settings.setValue("checkforUpdates", false);
         }
+
+        settings.sync();
     }
 
 
@@ -812,6 +846,48 @@ void MainWindow::on_packetHexEdit_lostFocus()
 
 void MainWindow::on_requestPathEdit_lostFocus()
 {
+    QDEBUG();
+
+
+    auto isHttp = ui->udptcpComboBox->currentText().toLower().contains("http");
+    auto isHttps = ui->udptcpComboBox->currentText().toLower().contains("https");
+
+    if(isHttp) {
+
+        QString quicktestURL =  ui->requestPathEdit->text();
+        QUrl url = QUrl(quicktestURL);
+
+        if(url.isValid() && (quicktestURL.startsWith("http://") || quicktestURL.startsWith("https://"))) {
+
+            int defaultPort = 80;
+            if(quicktestURL.startsWith("https://")) {
+                defaultPort = 443;
+                if(!isHttps) {
+                    ui->udptcpComboBox->setCurrentIndex(ui->udptcpComboBox->findText("HTTPS Get"));
+                    isHttps = true;
+                }
+            } else {
+                if(isHttps) {
+                    ui->udptcpComboBox->setCurrentIndex(ui->udptcpComboBox->findText("HTTP Get"));
+                    isHttps = false;
+                }
+            }
+
+            ui->packetPortEdit->setText(QString::number(url.port(defaultPort)));
+            ui->packetIPEdit->setText((url.host()));
+            auto urlpath = url.path();
+            auto urlquery = url.query();
+            if(!urlquery.isEmpty()) {
+                ui->requestPathEdit->setText(url.path() + "?" + urlquery);
+            } else {
+                ui->requestPathEdit->setText(url.path());
+            }
+
+            quicktestURL =  ui->requestPathEdit->text();
+        }
+
+
+    }
 
 }
 
@@ -894,7 +970,7 @@ void MainWindow::sendClick(QString packetName)
             if (toSend.repeat > 0) {
                 toSend.timestamp = QDateTime::currentDateTime();
 
-                stopResendingButton->setStyleSheet("QPushButton { color: green; } QPushButton::hover { color: #BC810C; } ");
+                stopResendingButton->setStyleSheet("QPushButton { color: green; background-color: #505F69; } QPushButton::hover { color: #BC810C; background-color: #505F69; } ");
                 packetsRepeat.append(toSend);
                 stopResendingButton->setText("Resending (" + QString::number(packetsRepeat.size()) + ")");
                 stopResending = 0;
@@ -1145,7 +1221,7 @@ void MainWindow::on_testPacketButton_clicked()
 
         testPacket.timestamp = QDateTime::currentDateTime();
 
-        stopResendingButton->setStyleSheet("QPushButton { color: green; } QPushButton::hover { color: #BC810C; } ");
+        stopResendingButton->setStyleSheet("QPushButton { color: green; background-color: #505F69; } QPushButton::hover { color: #BC810C; background-color: #505F69; } ");
         packetsRepeat.append(testPacket);
         stopResendingButton->setText("Resending (" + QString::number(packetsRepeat.size()) + ")");
         stopResending = 0;
@@ -1309,6 +1385,23 @@ void MainWindow::on_packetsTable_itemChanged(QTableWidgetItem *item)
         if ((newText.trimmed().toUpper() == "TCP") || (newText.trimmed().toUpper() == "UDP") || (newText.trimmed().toUpper() == "SSL")) {
             updatePacket.tcpOrUdp = newText.trimmed().toUpper();
         }
+        auto isHTTP = newText.trimmed().toUpper().contains("HTTP") || newText.trimmed().toUpper().contains("GET") || newText.trimmed().toUpper().contains("POST");
+
+        if(isHTTP) {
+            auto isHTTPS = (newText.trimmed().toUpper().contains("HTTPS"));
+            auto isPOST = newText.trimmed().toUpper().contains("POST");
+            updatePacket.tcpOrUdp = "HTTP";
+            if(isHTTPS) {
+                updatePacket.tcpOrUdp.append("S");
+            }
+            if(isPOST) {
+                updatePacket.tcpOrUdp.append(" Post");
+            } else {
+                updatePacket.tcpOrUdp.append(" Get");
+            }
+        }
+
+
     }
     if (datatype == Settings::ASCII_STR) {
         QString hex = Packet::ASCIITohex(newText);
@@ -1449,6 +1542,12 @@ void MainWindow::populateTableRow(int rowCounter, Packet tempPacket)
     Packet::populateTableWidgetItem(tItem, tempPacket);
     tItem->setData(Packet::DATATYPE, Settings::ASCII_STR);
 
+    if(tempPacket.isHTTP()) {
+        tItem->setText(tempPacket.requestPath);
+        tItem->setData(Packet::DATATYPE, Settings::REQUEST_STR);
+    }
+
+
     QSize tSize = tItem->sizeHint();
     tSize.setWidth(200);
     tItem->setSizeHint(tSize);
@@ -1460,6 +1559,17 @@ void MainWindow::populateTableRow(int rowCounter, Packet tempPacket)
     Packet::populateTableWidgetItem(tItem, tempPacket);
     tItem->setData(Packet::DATATYPE, Settings::HEX_STR);
     ui->packetsTable->setItem(rowCounter, packetSavedTableHeaders.indexOf(Settings::HEX_STR), tItem);
+    if(tempPacket.isHTTP()) {
+        if(tempPacket.isPOST()) {
+            tItem->setText(tempPacket.asciiString());
+        } else {
+            tItem->setText("");
+        }
+        tItem->setData(Packet::DATATYPE, Settings::ASCII_STR);
+
+    }
+
+
     //QDEBUGVAR(tempPacket.hexString);
 }
 
@@ -1499,12 +1609,14 @@ void MainWindow::packetTable_checkMultiSelected()
         }
     }
 
-    while (packetList.size() > 1) {
-        //Multi not supported in this way anymore.
-        //Drop all but one.
-        packetList.removeLast();
-    }
+    ui->generatePanelButton->hide();
 
+    QDEBUGVAR(packetList.size());
+    if (packetList.size() > 1) {
+        // Panel Generation Not Finished
+        // ui->generatePanelButton->show();
+
+    }
 
     ui->testPacketButton->setText("Send");
     ui->testPacketButton->setStyleSheet("");
@@ -1690,6 +1802,8 @@ void MainWindow::applyNetworkSettings()
         statusBarMessage("Left " + QString::number(joinedSize) + " multicast group(s)");
     }
 
+    packetsLogged.useEllipsis = settings.value("ellipsisCheck", true).toBool();
+
     packetNetwork.kill();
     packetNetwork.init();
     packetNetwork.responseData = settings.value("responseHex", "").toString().trimmed();
@@ -1705,7 +1819,7 @@ void MainWindow::applyNetworkSettings()
 
 void MainWindow::cancelResends()
 {
-    stopResendingButton->setStyleSheet("QPushButton { color: black; } QPushButton::hover { color: #BC810C; } ");
+    stopResendingButton->setStyleSheet(PersistentConnection::RESEND_BUTTON_STYLE);
     stopResendingButton->setText("Resending");
     stopResending = 1;
 }
@@ -1823,7 +1937,7 @@ void MainWindow::on_bugsLinkButton_clicked()
 
 void MainWindow::on_forumsPacketSenderButton_clicked()
 {
-    QDesktopServices::openUrl(QUrl("http://forums.packetsender.com/"));
+    QDesktopServices::openUrl(QUrl("http://forums.naglecode.com/"));
 
 
 }
@@ -1897,12 +2011,18 @@ void MainWindow::setIPMode()
     bool isIPv6 = packetNetwork.IPv6Enabled();
 
     IPmodeButton->setText(packetNetwork.getIPmode());
+    themeTheButton(IPmodeButton);
 
-    if (isIPv6) {
-        QDEBUG() << "Set IPv6 stylesheet";
-        IPmodeButton->setStyleSheet(IPv6Stylesheet);
+    QString islight = "";
+
+    if(darkMode) {
+        islight = "light";
+    }
+
+    if(isIPv6) {
+        IPmodeButton->setStyleSheet("QPushButton { color: " + islight +"blue}");
     } else {
-        IPmodeButton->setStyleSheet(IPv4Stylesheet);
+        IPmodeButton->setStyleSheet("QPushButton { color:  " + islight +"green}");
     }
 
 
@@ -2326,21 +2446,59 @@ void MainWindow::on_actionDonate_Thank_You_triggered()
 
 void MainWindow::on_udptcpComboBox_currentIndexChanged(const QString &arg1)
 {
+    auto isHttp = arg1.toLower().contains("http");
+    auto isPost = arg1.toLower().contains("post") && isHttp;
+
+    if(isHttp) {
+        ui->asciiLabel->setText("Post Data");
+    } else {
+        ui->asciiLabel->setText("ASCII");
+    }
 
 
-    Q_UNUSED(arg1)
+    for (int i = 0; i < ui->hexHorizLayout->count(); ++i) {
+        QWidget *w = ui->hexHorizLayout->itemAt(i)->widget();
+        if(w != nullptr) {
+            w->setVisible(!isHttp);
+        }
+    }
 
     for (int i = 0; i < ui->requestLayout->count(); ++i) {
         QWidget *w = ui->requestLayout->itemAt(i)->widget();
         if(w != nullptr) {
-            w->setVisible(false);
+            w->setVisible(isHttp);
         }
     }
+
+    for (int i = 0; i < ui->asciiLayout->count(); ++i) {
+        QWidget *w = ui->asciiLayout->itemAt(i)->widget();
+        if(w != nullptr) {
+            w->setVisible((!isHttp) || isPost);
+        }
+    }
+
+    ui->genPostDataButton->setVisible(isPost);
 }
 
 void MainWindow::on_genPostDataButton_clicked()
 {
+    PostDataGen * phttp = new PostDataGen(this, ui->packetASCIIEdit->text());
 
+
+    bool ready = connect(phttp, &PostDataGen::postGenerated, this, [=](QString val) {
+        // use action as you wish
+        QDEBUGVAR(val);
+        ui->packetASCIIEdit->setText(val);
+
+        on_packetASCIIEdit_editingFinished();
+    });
+
+    if (!ready) {
+        QDEBUG() << "postGenerated connection false";
+    }
+
+
+    phttp->show();
 
 
 }
@@ -2348,10 +2506,42 @@ void MainWindow::on_genPostDataButton_clicked()
 void MainWindow::on_generatePanelButton_clicked()
 {
 
+    QList<Packet> packetList;
+    QModelIndexList indexes = ui->packetsTable->selectionModel()->selectedIndexes();
+    QModelIndex index;
+    QString selected, name;
 
+    QStringList nameList;
+    nameList.clear();
+
+    foreach (index, indexes) {
+        selected = index.data(Packet::PACKET_NAME).toString();
+        if(selected.isEmpty()) {
+            continue;
+        }
+        if (!nameList.contains(selected)) {
+            nameList.append(selected);
+        }
+    }
+
+    foreach (name, nameList) {
+        Packet pkt = Packet::fetchFromDB(name);
+        packetList.append(pkt);
+    }
+
+    PanelGenerator * gpanel = new PanelGenerator(this);
+
+    QDEBUG() << " packet send connect attempt:" << connect(gpanel, SIGNAL(sendPacket(Packet)),
+             &packetNetwork, SLOT(packetToSend(Packet)));
+
+
+    gpanel->init(packetList);
+    gpanel->show();
 }
 
 void MainWindow::on_actionPanel_Generator_triggered()
 {
-
+    PanelGenerator * gpanel = new PanelGenerator(this);
+    gpanel->initAutoLaunchOrEditMode();
+    gpanel->show();
 }

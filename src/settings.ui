@@ -17,7 +17,7 @@
    <item>
     <widget class="QTabWidget" name="settingsTabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
@@ -517,6 +517,13 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_18">
           <item>
+           <widget class="QCheckBox" name="darkModeCheck">
+            <property name="text">
+             <string>Use Dark Theme (requires restart)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QCheckBox" name="copyUnformattedCheck">
             <property name="text">
              <string>Copy to Clipboard button uses raw data</string>
@@ -541,6 +548,13 @@
            <widget class="QCheckBox" name="checkforUpdates">
             <property name="text">
              <string>Periodically check for updates</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="ellipsisCheck">
+            <property name="text">
+             <string>Use ellipsis [...] for long data entries (helps performance)</string>
             </property>
            </widget>
           </item>
